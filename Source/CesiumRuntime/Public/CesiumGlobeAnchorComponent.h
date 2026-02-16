@@ -128,6 +128,18 @@ private:
       Meta = (AllowPrivateAccess))
   FMatrix ActorToEarthCenteredEarthFixedMatrix;
 
+  /**
+   * Detect changes in the root component's transform, or not. This defaults to
+   * true, but may be useful to disable.
+   */
+  UPROPERTY(
+      BlueprintReadWrite,
+      BlueprintGetter = GetDetectTransformChanges,
+      BlueprintSetter = SetDetectTransformChanges,
+      Category = "Cesium",
+      Meta = (AllowPrivateAccess))
+  bool DetectTransformChanges = true;
+
 #pragma endregion
 
 #pragma region Property Accessors
@@ -275,6 +287,27 @@ public:
    */
   UFUNCTION(BlueprintSetter, Category = "Cesium")
   void SetAdjustOrientationForGlobeWhenMoving(bool Value);
+
+  /**
+   * Gets a flag indicating whether to update the globe anchor when the owner's
+   * postition and transform change.
+   *
+   * This property should usually be enabled, but it may be useful to disable it
+   * for performance reasons.
+   */
+  UFUNCTION(BlueprintGetter, Category = "Cesium")
+  bool GetDetectTransformChanges() const;
+
+  /**
+   * Sets a flag indicating whether to update the globe anchor when the owner's
+   * postition and transform change.
+   *
+   * This property should usually be enabled, but it may be useful to disable it
+   * for performance reasons.
+   */
+
+  UFUNCTION(BlueprintSetter, Category = "Cesium")
+  void SetDetectTransformChanges(bool Value);
 
 #pragma endregion
 
