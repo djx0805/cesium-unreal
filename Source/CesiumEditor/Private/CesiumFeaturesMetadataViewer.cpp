@@ -300,7 +300,7 @@ void CesiumFeaturesMetadataViewer::gatherTilesetStatistics() {
                   pClassId,
                   pPropertyId,
                   semantic,
-                  FCesiumMetadataValue::fromJsonValue(*maybeValue, valueType)};
+                  FCesiumMetadataValue(*maybeValue, valueType)};
               pProperty->statistics.Emplace(
                   MakeShared<StatisticView>(std::move(statistic)));
             }
