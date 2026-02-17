@@ -5,7 +5,6 @@
 #include "CesiumGltfPrimitiveComponent.h"
 
 #include "Math/Box.h"
-#include "Misc/Optional.h"
 
 #include <CesiumGltf/MeshPrimitive.h>
 
@@ -61,7 +60,7 @@ struct FCesiumGltfGaussianSplatData {
   /**
    * The bounds of this splat data in local space.
    */
-  TOptional<FBox> Bounds;
+  FBox Bounds;
 
   /**
    * The number of spherical harmonic coefficients contained in this data. This
@@ -96,10 +95,6 @@ class UCesiumGltfGaussianSplatComponent : public UCesiumGltfPrimitiveComponent {
   GENERATED_BODY()
 
 public:
-  // Sets default values for this component's properties
-  UCesiumGltfGaussianSplatComponent();
-  virtual ~UCesiumGltfGaussianSplatComponent();
-
   virtual void
   UpdateTransformFromCesium(const glm::dmat4& CesiumToUnrealTransform) override;
 
@@ -117,11 +112,6 @@ public:
    * glTF. You should not need to call it yourself.
    */
   void RegisterWithSubsystem();
-
-  /**
-   * Returns the bounds of the gaussian splat data in local space.
-   */
-  FBox GetBounds() const;
 
   /**
    * Returns the transformation matrix of this glTF component as a

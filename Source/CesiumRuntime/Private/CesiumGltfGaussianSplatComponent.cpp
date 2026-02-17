@@ -4,7 +4,10 @@
 
 #include "CesiumGaussianSplatSubsystem.h"
 #include "CesiumRuntime.h"
+
 #include "Engine.h"
+#include "Math/Box.h"
+#include "Misc/Optional.h"
 
 #include <CesiumGltf/AccessorView.h>
 #include <CesiumGltf/MeshPrimitive.h>
@@ -106,17 +109,10 @@ void writeConvertedAccessor(
 }
 } // namespace
 
-// Sets default values for this component's properties
-UCesiumGltfGaussianSplatComponent::UCesiumGltfGaussianSplatComponent() {}
-
-UCesiumGltfGaussianSplatComponent::~UCesiumGltfGaussianSplatComponent() {}
-
 void UCesiumGltfGaussianSplatComponent::UpdateTransformFromCesium(
     const glm::dmat4& CesiumToUnrealTransform) {
   UCesiumGltfPrimitiveComponent::UpdateTransformFromCesium(
       CesiumToUnrealTransform);
-
-  const FTransform& Transform = this->GetComponentTransform();
 
   check(GEngine);
   UCesiumGaussianSplatSubsystem* pSplatSubsystem =
@@ -129,7 +125,6 @@ void UCesiumGltfGaussianSplatComponent::UpdateTransformFromCesium(
 void UCesiumGltfGaussianSplatComponent::OnUpdateTransform(
     EUpdateTransformFlags /*UpdateTransformFlags*/,
     ETeleportType /*Teleport*/) {
-  const FTransform& Transform = this->GetComponentTransform();
   check(GEngine);
   UCesiumGaussianSplatSubsystem* pSplatSubsystem =
       GEngine->GetEngineSubsystem<UCesiumGaussianSplatSubsystem>();
@@ -151,10 +146,6 @@ void UCesiumGltfGaussianSplatComponent::OnVisibilityChanged() {
       Log,
       TEXT("Transform visible: %s"),
       this->IsVisible() ? TEXT("true") : TEXT("false"));
-}
-
-FBox UCesiumGltfGaussianSplatComponent::GetBounds() const {
-  return this->Data.Bounds.Get(FBox());
 }
 
 glm::mat4x4 UCesiumGltfGaussianSplatComponent::GetMatrix() const {
@@ -200,7 +191,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   if (positionIt == meshPrimitive.attributes.end()) {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT("Mesh primitive has no 'POSITION' attribute"));
     return;
   }
@@ -209,7 +200,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   if (positionView.status() != CesiumGltf::AccessorViewStatus::Valid) {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT(
             "'POSITION' accessor view on mesh primitive returned invalid status: %d"),
         positionView.status());
@@ -218,6 +209,8 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
 
   this->Positions.SetNum(positionView.size() * 4, EAllowShrinking::Yes);
   this->NumSplats = positionView.size();
+
+  TOptional<FBox> Bounds;
   for (int32 i = 0; i < positionView.size(); i++) {
     FVector Position(
         positionView[i].x * CesiumPrimitiveData::positionScaleFactor,
@@ -231,21 +224,23 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
     this->Positions[i * 4 + 3] = 0.0;
 
     // Take this opportunity to update the bounds.
-    if (this->Bounds) {
-      this->Bounds->Min = FVector(
-          std::min(this->Bounds->Min.X, Position.X),
-          std::min(this->Bounds->Min.Y, Position.Y),
-          std::min(this->Bounds->Min.Z, Position.Z));
-      this->Bounds->Max = FVector(
-          std::max(this->Bounds->Max.X, Position.X),
-          std::max(this->Bounds->Max.Y, Position.Y),
-          std::max(this->Bounds->Max.Z, Position.Z));
+    if (Bounds) {
+      Bounds->Min = FVector(
+          std::min(Bounds->Min.X, Position.X),
+          std::min(Bounds->Min.Y, Position.Y),
+          std::min(Bounds->Min.Z, Position.Z));
+      Bounds->Max = FVector(
+          std::max(Bounds->Max.X, Position.X),
+          std::max(Bounds->Max.Y, Position.Y),
+          std::max(Bounds->Max.Z, Position.Z));
     } else {
-      this->Bounds = FBox();
-      this->Bounds->Min = FVector(Position.X, Position.Y, Position.Z);
-      this->Bounds->Max = Bounds->Min;
+      Bounds = FBox();
+      Bounds->Min = FVector(Position.X, Position.Y, Position.Z);
+      Bounds->Max = Bounds->Min;
     }
   }
+
+  this->Bounds = Bounds.Get(FBox());
 
   const std::unordered_map<std::string, int32_t>::const_iterator scaleIt =
       meshPrimitive.attributes.find("KHR_gaussian_splatting:SCALE");
@@ -284,7 +279,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   if (rotationIt == meshPrimitive.attributes.end()) {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT(
             "Mesh primitive has no 'KHR_gaussian_splatting:ROTATION' attribute"));
     return;
@@ -294,7 +289,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   if (rotationView.status() != CesiumGltf::AccessorViewStatus::Valid) {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT(
             "'KHR_gaussian_splatting:ROTATION' accessor view on mesh primitive returned invalid status: %d"),
         rotationView.status());
@@ -319,17 +314,14 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   const std::unordered_map<std::string, int32_t>::const_iterator colorIt =
       meshPrimitive.attributes.find("COLOR_0");
   if (colorIt == meshPrimitive.attributes.end()) {
-    UE_LOG(
-        LogCesium,
-        Warning,
-        TEXT("Mesh primitive has no 'COLOR_0' attribute"));
+    UE_LOG(LogCesium, Error, TEXT("Mesh primitive has no 'COLOR_0' attribute"));
     return;
   }
 
   if (colorIt->second < 0 || colorIt->second >= model.accessors.size()) {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT("Mesh primitive has invalid 'COLOR_0' accessor index %d"),
         colorIt->second);
     return;
@@ -342,7 +334,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
     if (accessorView.status() != CesiumGltf::AccessorViewStatus::Valid) {
       UE_LOG(
           LogCesium,
-          Warning,
+          Error,
           TEXT(
               "'COLOR_0' accessor view on mesh primitive returned invalid status: %d"),
           accessorView.status());
@@ -358,7 +350,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
     if (accessorView.status() != CesiumGltf::AccessorViewStatus::Valid) {
       UE_LOG(
           LogCesium,
-          Warning,
+          Error,
           TEXT(
               "'COLOR_0' accessor view on mesh primitive returned invalid status: %d"),
           accessorView.status());
@@ -374,7 +366,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
     if (accessorView.status() != CesiumGltf::AccessorViewStatus::Valid) {
       UE_LOG(
           LogCesium,
-          Warning,
+          Error,
           TEXT(
               "'COLOR_0' accessor view on mesh primitive returned invalid status: %d"),
           accessorView.status());
@@ -391,7 +383,7 @@ FCesiumGltfGaussianSplatData::FCesiumGltfGaussianSplatData(
   } else {
     UE_LOG(
         LogCesium,
-        Warning,
+        Error,
         TEXT(
             "Invalid 'COLOR_0' componentType. Allowed values are UNSIGNED_BYTE, UNSIGNED_SHORT, and FLOAT."));
     return;

@@ -16,14 +16,13 @@
 #include "CesiumGaussianSplatSubsystem.generated.h"
 
 /**
- * A blank actor type just to signify the splat singleton actor.
+ * A singleton actor attached to the Niagara system spawned to render gaussian
+ * splats, allowing us to ensure that only one system exists in a UWorld at any
+ * given time.
  */
 UCLASS(Transient)
 class ACesiumGaussianSplatActor : public AActor {
   GENERATED_BODY()
-
-public:
-  int32 NumSplatsSpawned = 0;
 };
 
 UCLASS()
@@ -32,15 +31,29 @@ class UCesiumGaussianSplatSubsystem : public UEngineSubsystem,
   GENERATED_BODY()
 
 public:
-  // static UCesiumGaussianSplatSubsystem* Get(UWorld* InWorld);
   virtual void Initialize(FSubsystemCollectionBase& Collection) override;
   virtual void Deinitialize() override;
 
+  /**
+   * Registers a splat component with the splat subsystem, adding it to the list
+   * of splat components to render.
+   */
   void RegisterSplat(UCesiumGltfGaussianSplatComponent* Component);
+  /**
+   * Unregisters a previously-registered splat component, removing it from the
+   * list of splat components to render.
+   */
   void UnregisterSplat(UCesiumGltfGaussianSplatComponent* Component);
+  /**
+   * Recomputes the bounds of the Niagara system that renders the splats. This
+   * should be called when the transforms of any of the registered components
+   * changes.
+   */
   void RecomputeBounds();
-  int32 GetNumSplats() const;
 
+  /**
+   * The currently-registerd splat components.
+   */
   TArray<UCesiumGltfGaussianSplatComponent*> SplatComponents;
 
   virtual void Tick(float DeltaTime) override;

@@ -22,7 +22,7 @@ FBox CalculateBounds(
   for (UCesiumGltfGaussianSplatComponent* Component : Components) {
     check(Component);
     const FTransform& ComponentTransform = Component->GetComponentTransform();
-    FBox ActorBounds = Component->GetBounds();
+    const FBox& ActorBounds = Component->Data.Bounds;
     FBox TransformedBounds{
         ComponentTransform.TransformPosition(ActorBounds.Min),
         ComponentTransform.TransformPosition(ActorBounds.Max)};
@@ -93,10 +93,6 @@ UWorld* GetPrimaryWorld() {
   return Contexts[0].World();
 }
 } // namespace
-
-int32 UCesiumGaussianSplatSubsystem::GetNumSplats() const {
-  return this->NumSplats;
-}
 
 void UCesiumGaussianSplatSubsystem::InitializeForWorld(UWorld& InWorld) {
   for (ACesiumGaussianSplatActor* Actor :

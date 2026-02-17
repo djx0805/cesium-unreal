@@ -159,10 +159,10 @@ FNDIGaussianSplatProxy::FNDIGaussianSplatProxy(
     UCesiumGaussianSplatDataInterface* InOwner)
     : Owner(InOwner) {}
 
-void FNDIGaussianSplatProxy::UploadToGPU(
+int32 FNDIGaussianSplatProxy::UploadToGPU(
     UCesiumGaussianSplatSubsystem* SplatSystem) {
   if (this->Owner == nullptr || !IsValid(SplatSystem)) {
-    return;
+    return 0;
   }
 
   UWorld* World = this->Owner->GetWorld();
@@ -181,30 +181,35 @@ void FNDIGaussianSplatProxy::UploadToGPU(
     });
   }
 
+  int32 TotalCoeffsCount = 0;
+  int32 TotalSplatComponentsCount = 0;
+  int32 NumSplats = 0;
+  for (const UCesiumGltfGaussianSplatComponent* SplatComponent :
+       SplatSystem->SplatComponents) {
+    check(SplatComponent);
+    if (SplatComponent->GetWorld() != World) {
+      continue;
+    }
+    TotalCoeffsCount +=
+        SplatComponent->Data.NumCoefficients * SplatComponent->Data.NumSplats;
+    NumSplats += SplatComponent->Data.NumSplats;
+    TotalSplatComponentsCount++;
+  }
+
   if (!this->bNeedsUpdate) {
-    return;
+    return NumSplats;
   }
 
   this->bNeedsUpdate = false;
 
   ENQUEUE_RENDER_COMMAND(FUpdateGaussianSplatBuffers)
-  ([this, SplatSystem, World](FRHICommandListImmediate& RHICmdList) {
+  ([this,
+    SplatSystem,
+    World,
+    TotalCoeffsCount,
+    TotalSplatComponentsCount,
+    NumSplats](FRHICommandListImmediate& RHICmdList) {
     FScopeLock ScopeLock(&this->BufferLock);
-
-    int32 TotalCoeffsCount = 0;
-    int32 TotalSplatComponentsCount = 0;
-    int32 NumSplats = 0;
-    for (const UCesiumGltfGaussianSplatComponent* SplatComponent :
-         SplatSystem->SplatComponents) {
-      check(SplatComponent);
-      if (SplatComponent->GetWorld() != World) {
-        continue;
-      }
-      TotalCoeffsCount +=
-          SplatComponent->Data.NumCoefficients * SplatComponent->Data.NumSplats;
-      NumSplats += SplatComponent->Data.NumSplats;
-      TotalSplatComponentsCount++;
-    }
 
     const int32 ExpectedPosBytes = NumSplats * 4 * sizeof(float);
     if (this->PositionsBuffer.NumBytes != ExpectedPosBytes) {
@@ -382,6 +387,8 @@ void FNDIGaussianSplatProxy::UploadToGPU(
       }
     }
   });
+
+  return NumSplats;
 }
 
 UCesiumGaussianSplatDataInterface::UCesiumGaussianSplatDataInterface(
@@ -555,10 +562,9 @@ void UCesiumGaussianSplatDataInterface::SetShaderParameters(
   if (Params) {
     UCesiumGaussianSplatSubsystem* SplatSystem = this->GetSubsystem();
 
-    DIProxy.UploadToGPU(SplatSystem);
+    int32 NumSplats = DIProxy.UploadToGPU(SplatSystem);
 
-    Params->SplatsCount =
-        IsValid(SplatSystem) ? SplatSystem->GetNumSplats() : 0;
+    Params->SplatsCount = NumSplats;
     Params->SplatIndices =
         FNiagaraRenderer::GetSrvOrDefaultUInt(DIProxy.SplatIndicesBuffer.SRV);
     Params->TileTransforms = FNiagaraRenderer::GetSrvOrDefaultFloat4(

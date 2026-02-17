@@ -33,7 +33,7 @@ struct FNDIGaussianSplatProxy : public FNiagaraDataInterfaceProxy {
     return 0;
   }
 
-  void UploadToGPU(UCesiumGaussianSplatSubsystem* SplatSystem);
+  int32 UploadToGPU(UCesiumGaussianSplatSubsystem* SplatSystem);
 };
 
 BEGIN_SHADER_PARAMETER_STRUCT(FGaussianSplatShaderParams, )

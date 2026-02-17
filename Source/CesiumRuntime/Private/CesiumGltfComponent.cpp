@@ -1484,6 +1484,11 @@ static void loadPrimitive(
       glm::dvec4(0.0, 0.0, scale, 0.0),
       glm::dvec4(0.0, 0.0, 0.0, 1.0));
 
+  primitiveResult.meshIndex = options.pMeshOptions->meshIndex;
+  primitiveResult.primitiveIndex = options.primitiveIndex;
+  primitiveResult.pCollisionMesh = nullptr;
+  primitiveResult.transform = transform * yInvertMatrix * scaleMatrix;
+
   if (primitive.hasExtension<CesiumGltf::ExtensionKhrGaussianSplatting>()) {
     // Data in a gaussian splat is handled differently from other mesh data.
     primitiveResult.GaussianSplatData =
@@ -1816,12 +1821,6 @@ static void loadPrimitive(
       }
     }
   }
-
-  primitiveResult.meshIndex = options.pMeshOptions->meshIndex;
-  primitiveResult.primitiveIndex = options.primitiveIndex;
-  primitiveResult.pCollisionMesh = nullptr;
-
-  primitiveResult.transform = transform * yInvertMatrix * scaleMatrix;
 }
 
 static void loadIndexedPrimitive(
