@@ -1606,36 +1606,12 @@ static void loadPrimitive(
       }
     }
 
-  auto colorAccessorIt = primitive.attributes.find(
-      CesiumGltf::VertexAttributeSemantics::COLOR_n[0]);
-  if (colorAccessorIt != primitive.attributes.end()) {
-    TRACE_CPUPROFILER_EVENT_SCOPE(Cesium::CopyVertexColors)
-    LODResources.VertexBuffers.ColorVertexBuffer.Init(numVertices, false);
-    LODResources.bHasColorVertexData = createAccessorView(
-        model,
-        colorAccessorIt->second,
-        ColorVisitor{
-            duplicateVertices,
-            LODResources.VertexBuffers.ColorVertexBuffer,
-            indices});
-  }
-
-  // Encodes the `EXT_primitive_features` and `EXT_structural_metadata`
-  // extensions on the primitive, if present. This must be done before material
-  // textures are loaded, in case any of the material textures are also used for
-  // features + metadata.
-  loadPrimitiveFeaturesMetadata(primitiveResult, options, model, primitive);
-
-  const CreateModelOptions& modelOptions =
-      *options.pMeshOptions->pNodeOptions->pModelOptions;
-  {
-    TRACE_CPUPROFILER_EVENT_SCOPE(Cesium::AccumulateTextureCoordinates)
-    const LoadGltfResult::LoadedModelResult* pModelResult =
-        options.pMeshOptions->pNodeOptions->pHalfConstructedModelResult;
-
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-    if (modelOptions.pFeaturesMetadata.IsValid()) {
-      accumulateFeaturesMetadataAccessors(
+    auto colorAccessorIt = primitive.attributes.find(
+        CesiumGltf::VertexAttributeSemantics::COLOR_n[0]);
+    if (colorAccessorIt != primitive.attributes.end()) {
+      TRACE_CPUPROFILER_EVENT_SCOPE(Cesium::CopyVertexColors)
+      LODResources.VertexBuffers.ColorVertexBuffer.Init(numVertices, false);
+      LODResources.bHasColorVertexData = createAccessorView(
           model,
           colorAccessorIt->second,
           ColorVisitor{
