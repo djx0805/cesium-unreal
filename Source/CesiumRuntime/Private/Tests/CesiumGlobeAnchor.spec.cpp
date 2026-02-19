@@ -146,6 +146,21 @@ void FCesiumGlobeAnchorSpec::Define() {
         beforeLLH);
   });
 
+  It("updates after Sync() when DetectTransformChanges is false", [this]() {
+    FVector beforeLLH = this->pGlobeAnchor->GetLongitudeLatitudeHeight();
+
+    this->pGlobeAnchor->SetDetectTransformChanges(false);
+    this->pActor->SetActorLocation(FVector(1000.0, 2000.0, 3000.0));
+
+    this->pGlobeAnchor->Sync();
+    // Globe position doesn't update while unsubscribed
+    TestNotEqual(
+        "globe position when DetectTransformChanges is false before Sync()",
+        this->pGlobeAnchor->GetLongitudeLatitudeHeight(),
+        beforeLLH);
+    this->pGlobeAnchor->SetDetectTransformChanges(true);
+  });
+
   It("adjusts orientation for globe when actor position is set immediately after adding anchor",
      [this]() {
        FRotator beforeRotation = this->pActor->GetActorRotation();

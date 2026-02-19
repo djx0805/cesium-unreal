@@ -2,6 +2,10 @@
 
 ### ???
 
+##### Additions :tada:
+
+- Added a DetectTransformChanges property on CesiumGlobeAnchor, which can be used to disable updating the globe anchor.
+
 ##### Fixes :wrench:
 
 - Added a missing includes in `CesiumCartographicPolygon.cpp` and `CesiumMetadataValue.h`, introduced in `v2.23.0`.

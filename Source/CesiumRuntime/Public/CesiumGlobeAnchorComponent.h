@@ -92,6 +92,25 @@ private:
   bool AdjustOrientationForGlobeWhenMoving = true;
 
   /**
+   * Whether to automatically detect changes in the Actor's root transform and
+   * update the precise globe coordinates accordingly.
+   *
+   * When this is property is false, the precise coordinates may become out of
+   * sync with the Actor's root transform. However, you can still directly set
+   * the precise coordinates, and its transform will update accordingly. You can
+   * also call Sync after changing the Actor's transform  to manually update the
+   * precise coordinates.
+   */
+  UPROPERTY(
+      EditAnywhere,
+      BlueprintReadWrite,
+      BlueprintGetter = GetDetectTransformChanges,
+      BlueprintSetter = SetDetectTransformChanges,
+      Category = "Cesium",
+      Meta = (AllowPrivateAccess))
+  bool DetectTransformChanges = true;
+
+  /**
    * Using the teleport flag will move objects to the updated transform
    * immediately and without affecting their velocity. This is useful when
    * working with physics actors that maintain an internal velocity which we do
@@ -127,19 +146,6 @@ private:
       Category = "Cesium",
       Meta = (AllowPrivateAccess))
   FMatrix ActorToEarthCenteredEarthFixedMatrix;
-
-  /**
-   * Detect changes in the root component's transform, or not. This defaults to
-   * true, but may be useful to disable.
-   */
-  UPROPERTY(
-      EditAnywhere,
-      BlueprintReadWrite,
-      BlueprintGetter = GetDetectTransformChanges,
-      BlueprintSetter = SetDetectTransformChanges,
-      Category = "Cesium",
-      Meta = (AllowPrivateAccess))
-  bool DetectTransformChanges = true;
 
 #pragma endregion
 
@@ -290,8 +296,8 @@ public:
   void SetAdjustOrientationForGlobeWhenMoving(bool Value);
 
   /**
-   * Gets a flag indicating whether to update the globe anchor when the owner's
-   * postition and transform change.
+   * Gets a flag indicating whether to update the globe anchor when the Actors's
+   * transform changes.
    *
    * This property should usually be enabled, but it may be useful to disable it
    * for performance reasons.
@@ -300,8 +306,8 @@ public:
   bool GetDetectTransformChanges() const;
 
   /**
-   * Sets a flag indicating whether to update the globe anchor when the owner's
-   * postition and transform change.
+   * Sets a flag indicating whether to update the globe anchor when the Actors's
+   * transform changes.
    *
    * This property should usually be enabled, but it may be useful to disable it
    * for performance reasons.
@@ -485,6 +491,7 @@ public:
    *   - If the origin of the CesiumGeoreference has changed, the Actor's root
    * transform is updated based on the ActorToEarthCenteredEarthFixedMatrix and
    * the new georeference origin.
+   *   - This synchronization works even if DetectTransformChanges is false.
    */
   UFUNCTION(BlueprintCallable, Category = "Cesium")
   void Sync();
