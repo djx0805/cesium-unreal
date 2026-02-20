@@ -153,7 +153,7 @@ void FCesiumGlobeAnchorSpec::Define() {
     this->pActor->SetActorLocation(FVector(1000.0, 2000.0, 3000.0));
 
     this->pGlobeAnchor->Sync();
-    // Globe position doesn't update while unsubscribed
+    // Globe position has been updated even though GlobeAnchor is unsubscribed.
     TestNotEqual(
         "globe position when DetectTransformChanges is false before Sync()",
         this->pGlobeAnchor->GetLongitudeLatitudeHeight(),
