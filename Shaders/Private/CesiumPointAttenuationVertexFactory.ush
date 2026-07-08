@@ -224,7 +224,10 @@ FVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(
   	Interpolants.TangentToWorld0 = float4(Intermediates.TangentToWorld[0], 0);
   	Interpolants.TangentToWorld2 = float4(Intermediates.TangentToWorld[2], Intermediates.TangentToWorldSign);
   	Interpolants.Color = Intermediates.Color;
-  	Interpolants.CornerOffset = Intermediates.CornerOffset;
+  
+  	// CornerOffset is only needed for circle rendering.
+  	bool renderCircles = AttenuationParameters.w >= 1;
+  	Interpolants.CornerOffset = renderCircles ? Intermediates.CornerOffset : float2(0, 0);
 
   	#if NUM_TEX_COORD_INTERPOLATORS
   	float2 CustomizedUVs[NUM_TEX_COORD_INTERPOLATORS];
@@ -306,7 +309,7 @@ float4 VertexFactoryGetRasterizedWorldPosition(
   	float2 PixelOffset = Intermediates.CornerOffset;
   	float Diameter = AttenuationParameters.w;
   	if (Diameter >= 1.0f) {
-   	  	PixelOffset *= Diameter * 0.5f;
+   	  	PixelOffset *= Diameter;
   	} else {
    	  	float MaximumPointSize = AttenuationParameters.x;
    	  	float GeometricError = AttenuationParameters.y;
@@ -383,10 +386,11 @@ FMaterialPixelParameters GetMaterialPixelParameters(FVertexFactoryInterpolantsVS
   	Result.TwoSidedSign = 1;
   	Result.VertexColor = Interpolants.Color;
 
-  	if (AttenuationParameters.w >= 1)
+  	if (Interpolants.CornerOffset.x != 0 || Interpolants.CornerOffset.y != 0)
   	{
   	  	// Rounds length to 0 for < 0.5, and 1 >= 0.5. The circle is defined by 1 - round.
-  	  	Result.VertexColor.a = (1.0f - round(length(Interpolants.CornerOffset))) * Interpolants.Color.a;
+  	  	bool outsideCircle = round(length(Interpolants.CornerOffset));
+  	  	Result.VertexColor.a = float(!outsideCircle) * Interpolants.Color.a;
   	}
 
   	half3 TangentToWorld0 = Interpolants.TangentToWorld0.xyz;
