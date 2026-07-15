@@ -1713,8 +1713,7 @@ static void loadPrimitive(
   LODResources.bHasReversedDepthOnlyIndices = false;
 
   if (isTriangles) {
-    // UE 5.5 requires that we do this in order to avoid a crash when ray
-    // tracing is enabled.
+    // This is required in order to avoid a crash when ray-tracing is enabled.
     pRenderData->InitializeRayTracingRepresentationFromRenderingLODs();
   }
 
