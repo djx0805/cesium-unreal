@@ -44,11 +44,13 @@
 #include "VecMath.h"
 #include "mikktspace.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <CesiumGeometry/Axis.h>
 #include <CesiumGeometry/Rectangle.h>
 #include <CesiumGeometry/Transforms.h>
 #include <CesiumGltf/AccessorUtility.h>
 #include <CesiumGltf/AccessorView.h>
+#include <CesiumGltf/ExtensionBentleyMaterialsPointStyle.h>
 #include <CesiumGltf/ExtensionExtInstanceFeatures.h>
 #include <CesiumGltf/ExtensionExtMeshFeatures.h>
 #include <CesiumGltf/ExtensionExtMeshGpuInstancing.h>
@@ -76,6 +78,7 @@
 #include <glm/mat3x3.hpp>
 #include <iostream>
 #include <type_traits>
+THIRD_PARTY_INCLUDES_END
 
 #if WITH_EDITOR
 #include "ScopedTransaction.h"
@@ -3439,6 +3442,7 @@ struct ConstructedPrimitiveComponent {
 };
 
 ConstructedPrimitiveComponent createPrimitiveComponent(
+    CesiumGltf::Model& model,
     UCesiumGltfComponent* pGltf,
     const LoadedPrimitiveResult& loadResult,
     int32_t primitiveMode,
@@ -3472,10 +3476,19 @@ ConstructedPrimitiveComponent createPrimitiveComponent(
     case CesiumGltf::MeshPrimitive::Mode::POINTS: {
       auto* pPointMesh =
           NewObject<UCesiumGltfPointsComponent>(pGltf, componentName);
-      pPointMesh->UsesAdditiveRefinement =
+      pPointMesh->usesAdditiveRefinement =
           tile.getRefine() == Cesium3DTilesSelection::TileRefine::Add;
-      pPointMesh->GeometricError = static_cast<float>(tile.getGeometricError());
-      pPointMesh->Dimensions = loadResult.dimensions;
+      pPointMesh->geometricError = static_cast<float>(tile.getGeometricError());
+      pPointMesh->dimensions = loadResult.dimensions;
+
+      const auto* pPointStyleExtension =
+          model.getSafe(model.materials, loadResult.materialIndex)
+              .getExtension<CesiumGltf::ExtensionBentleyMaterialsPointStyle>();
+      pPointMesh->diameter =
+          pPointStyleExtension
+              ? static_cast<int32>(pPointStyleExtension->diameter)
+              : 0;
+
       result.pAsMeshComponent = pPointMesh;
       result.pAsCesiumPrimitive = pPointMesh;
       break;
@@ -3675,6 +3688,7 @@ static void loadPrimitiveGameThreadPart(
       model.meshes[loadResult.meshIndex].primitives[loadResult.primitiveIndex];
 
   ConstructedPrimitiveComponent component = createPrimitiveComponent(
+      model,
       pGltf,
       loadResult,
       meshPrimitive.mode,
@@ -3749,6 +3763,7 @@ static void loadPrimitiveGameThreadPart(
     simplifiedResult.transform = loadResult.transform;
 
     ConstructedPrimitiveComponent component = createPrimitiveComponent(
+        model,
         pGltf,
         simplifiedResult,
         CesiumGltf::MeshPrimitive::Mode::LINES,
